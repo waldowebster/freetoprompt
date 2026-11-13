@@ -18,13 +18,13 @@ button.quiet:hover:not(:disabled) { background: #191e29; border-color: transpare
 #editor { width: min(1440px, 100%); margin: 0 auto; padding: 34px 32px 24px; flex: 1; display: flex; flex-direction: column; gap: 32px; }
 .header, .script-toolbar, .script-footer, .script-actions, .dialog-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 h1 { display: flex; align-items: center; gap: 14px; margin: 0; font-size: 27px; font-weight: 680; letter-spacing: -1.1px; white-space: nowrap; }
-.brand-mark { display: block; width: 46px; height: 46px; filter: drop-shadow(0 4px 14px #245fe52b); }
-.wordmark-to { color: #8dc9ff; font-weight: 450; }
-.brand-period { color: #8dc9ff; }
+.brand-mark { display: block; width: 46px; height: 46px; filter: drop-shadow(0 4px 14px #ff53632b); }
+.wordmark-to { color: #ff5363; font-weight: 450; }
+.brand-period { color: #ff5363; }
 .header-links { display: flex; align-items: center; gap: 28px; }
 .maker { display: flex; align-items: center; gap: 8px; min-height: 44px; color: #fff; text-decoration: none; white-space: nowrap; transition: opacity .18s; }
-.maker .maker-heart { width: 15px; height: 15px; flex: none; color: #ef4444; }
-.maker span { font-size: 13px; font-weight: 550; letter-spacing: 0; }
+.maker .maker-heart { width: 15px; height: 15px; flex: none; color: #ff5363; }
+.maker span { font-size: 13px; font-weight: 700; letter-spacing: 0.5px; }
 .maker:hover { opacity: .75; }
 .repo-actions { display: flex; align-items: stretch; }
 .repo-actions a { display: inline-flex; align-items: center; justify-content: center; gap: 9px; background: #080b12; box-shadow: inset 0 1px #ffffff04; }

@@ -44,7 +44,7 @@ function boot(saved = '{}', storageFails = false) {
 }
 
 test('empty and whitespace-only scripts cannot enter prompting', () => {
-  const app = boot();
+  const app = boot('{"text":""}');
   assert.equal(app.elements.btnMode.disabled, true);
   app.elements.script.value = ' \n\t ';
   app.elements.script.fire('input');
@@ -153,4 +153,17 @@ test('reset requires confirmation, preserves settings, and saves the cleared dra
   assert.equal(e.btnReset.disabled, true);
   assert.equal(app.document.activeElement, e.script);
   assert.equal(boot(JSON.stringify(app.stored())).elements.script.value, '');
+});
+
+
+test('intro script appears for new visitors without replacing saved or cleared drafts', () => {
+  const firstVisit = boot(null);
+  assert.match(firstVisit.elements.script.value, /open source teleprompter by Waldo Webster/);
+  assert.equal(firstVisit.elements.btnMode.disabled, false);
+  assert.equal(firstVisit.stored().text, firstVisit.elements.script.value);
+  firstVisit.elements.btnMode.fire('click');
+  assert.equal(firstVisit.elements.stage.hidden, false);
+  assert.ok(firstVisit.elements.content.children.some(p => p.textContent.includes('Waldo Webster')));
+  assert.equal(boot('{"text":"My own script"}').elements.script.value, 'My own script');
+  assert.equal(boot('{"text":""}').elements.script.value, '');
 });

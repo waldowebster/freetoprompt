@@ -3,7 +3,17 @@
   const LS_KEY = 'prompter.v1';
   const LINE = 1.35; // must match #content line-height
 
-  const s = { text: '', size: 46, bright: 100, speed: 20, width: 80, mirrorH: false, mirrorV: false };
+  const DEFAULT_SCRIPT = `Welcome to Free to Prompt.
+
+A free, open source teleprompter by Waldo Webster.
+
+Built for anyone with something to say. No signup, no subscriptions. Your script stays in your browser.
+
+Explore the code, suggest an improvement, or contribute on GitHub. Find Waldo at waldo.biz.
+
+Your words. Your pace. Press play.`;
+
+  const s = { text: DEFAULT_SCRIPT, size: 46, bright: 100, speed: 20, width: 80, mirrorH: false, mirrorV: false };
   try {
     const saved = JSON.parse(localStorage.getItem(LS_KEY) || '{}');
     if (saved && typeof saved === 'object') {
