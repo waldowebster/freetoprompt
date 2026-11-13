@@ -14,7 +14,8 @@ function boot(saved = '{}', storageFails = false) {
     const handlers = new Map();
     const classes = new Set();
     return {
-      value: '', textContent: '', hidden: false, checked: false, disabled: false,
+      value: '', textContent: '', hidden: false, checked: false, disabled: false, open: false,
+      showModal() { this.open = true; }, close() { this.open = false; },
       style: { setProperty(k, v) { this[k] = v; } },
       classList: { add: (...v) => v.forEach(x => classes.add(x)), remove: (...v) => v.forEach(x => classes.delete(x)), contains: v => classes.has(v) },
       addEventListener(name, fn) { const list = handlers.get(name) || []; list.push(fn); handlers.set(name, list); },
@@ -118,4 +119,38 @@ test('Play starts scrolling immediately and returning preserves the draft', () =
   assert.equal(app.elements.stage.hidden, true);
   assert.equal(app.elements.btnMode.textContent, 'Play');
   assert.equal(app.elements.script.value, 'Keep this draft');
+});
+
+
+test('new visitors default to size 46 while saved preferences are preserved', () => {
+  assert.equal(boot().stored().size, 46);
+  assert.equal(boot('{"size":72}').stored().size, 72);
+});
+
+test('reset requires confirmation, preserves settings, and saves the cleared draft', () => {
+  const app = boot('{"text":"Keep until confirmed","size":72,"speed":30,"bright":85,"mirrorH":true}');
+  const e = app.elements;
+  e.btnReset.fire('click');
+  assert.equal(e.resetDialog.open, true);
+  app.window.fire('keydown', {key: 'Enter', ctrlKey: true});
+  assert.equal(e.stage.hidden, true);
+  e.btnCancelReset.fire('click');
+  assert.equal(e.resetDialog.open, false);
+  assert.equal(e.script.value, 'Keep until confirmed');
+  assert.equal(app.stored().text, 'Keep until confirmed');
+  e.btnReset.fire('click');
+  e.btnConfirmReset.fire('click');
+  assert.equal(e.resetDialog.open, false);
+  assert.equal(e.script.value, '');
+  assert.equal(app.stored().text, '');
+  assert.equal(app.stored().size, 72);
+  assert.equal(app.stored().speed, 30);
+  assert.equal(app.stored().bright, 85);
+  assert.equal(app.stored().mirrorH, true);
+  assert.equal(e.wordCount.textContent, '0 words');
+  assert.equal(e.btnMode.disabled, true);
+  assert.equal(e.btnExport.disabled, true);
+  assert.equal(e.btnReset.disabled, true);
+  assert.equal(app.document.activeElement, e.script);
+  assert.equal(boot(JSON.stringify(app.stored())).elements.script.value, '');
 });

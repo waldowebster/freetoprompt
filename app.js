@@ -3,7 +3,7 @@
   const LS_KEY = 'prompter.v1';
   const LINE = 1.35; // must match #content line-height
 
-  const s = { text: '', size: 64, bright: 100, speed: 20, width: 80, mirrorH: false, mirrorV: false };
+  const s = { text: '', size: 46, bright: 100, speed: 20, width: 80, mirrorH: false, mirrorV: false };
   try {
     const saved = JSON.parse(localStorage.getItem(LS_KEY) || '{}');
     if (saved && typeof saved === 'object') {
@@ -169,6 +169,7 @@
 
   // ---------- input ----------
   window.addEventListener('keydown', e => {
+    if ($('resetDialog').open || $('shortcuts').open) return;
     if (!prompting) {
       if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); startPrompting(); }
       return;
@@ -242,6 +243,7 @@
     $('wordCount').textContent = `${words.toLocaleString()} ${words === 1 ? 'word' : 'words'}`;
     $('btnMode').disabled = !words;
     $('btnExport').disabled = !words;
+    $('btnReset').disabled = !script.value.length;
   }
   script.addEventListener('input', () => { s.text = script.value; save(); updateEditor(); });
   $('btnImport').addEventListener('click', () => $('fileInput').click());
@@ -261,6 +263,15 @@
     const link = document.createElement('a');
     link.href = url; link.download = 'freetoprompt-script.txt'; link.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
+  $('btnReset').addEventListener('click', () => $('resetDialog').showModal());
+  $('btnCancelReset').addEventListener('click', () => $('resetDialog').close());
+  $('btnConfirmReset').addEventListener('click', () => {
+    script.value = s.text = '';
+    save();
+    updateEditor();
+    $('resetDialog').close();
+    script.focus();
   });
   $('btnKeys').addEventListener('click', () => $('shortcuts').showModal());
   $('btnCloseKeys').addEventListener('click', () => $('shortcuts').close());
