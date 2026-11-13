@@ -142,3 +142,14 @@ kbd { padding: 3px 7px; border: 1px solid #405473; border-bottom-width: 2px; bor
 }
 @media (max-width: 370px) { .header-links { flex-wrap: wrap; } .repo-actions a { padding-inline: 8px; } .script-actions button::before { display: none !important; } .view-controls { flex-wrap: wrap; } #btnFull { flex: 1 1 100%; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; } }
+
+/* Keep content clear of notches and home indicators in the installed apps. */
+.native-app #editor { padding-top: calc(22px + env(safe-area-inset-top)); padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
+.native-app #paused { top: calc(16px + env(safe-area-inset-top)); right: max(16px, env(safe-area-inset-right)); }
+.native-app #toast { top: calc(76px + env(safe-area-inset-top)); }
+.native-app #btnFull { display: none; }
+.native-app #bar { margin-bottom: calc(16px + env(safe-area-inset-bottom)); }
+.native-app body.prompting #bar { margin-bottom: calc(12px + env(safe-area-inset-bottom)); }
+.app-links { display: flex; justify-content: flex-end; gap: 24px; margin-top: -16px; }
+.app-links a { display: inline-flex; align-items: center; min-height: 44px; color: #a5afc0; font-size: 14px; text-decoration: none; }
+.app-links a:hover { color: #fff; }

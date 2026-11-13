@@ -10,6 +10,40 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: node --check app.js
-      - run: node --test tests/*.test.mjs
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm run build:mobile
       - run: git diff --check
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@v3
+      - run: npm ci
+      - run: npm run build:mobile && npx cap sync android
+      - run: ./gradlew :app:assembleDebug :app:bundleRelease :app:lintDebug
+        working-directory: android
+  ios:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run build:mobile && npx cap sync ios
+      - run: >-
+          xcodebuild -project ios/App/App.xcodeproj -scheme App
+          -configuration Debug -sdk iphonesimulator
+          -destination 'generic/platform=iOS Simulator'
+          -derivedDataPath ios/DerivedData CODE_SIGNING_ALLOWED=NO build

@@ -1,11 +1,13 @@
 # Free to Prompt
 
-A free, open source teleprompter that runs in your browser.
+A free, open source teleprompter for the browser, iOS, and Android.
+Mobile apps are in development for publication by Waldough, Inc.
 
 **[Use Free to Prompt](https://freetoprompt.com)**
 
-No signup, subscription, runtime dependencies, or build step.
-Your script and settings stay in your browser's local storage.
+No signup or subscription.
+The browser version has no runtime dependencies or build step.
+Your script and settings stay on your device.
 
 ## Features
 
@@ -69,6 +71,26 @@ node --test tests/*.test.mjs
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for browser verification and contribution guidelines.
 See [deploy/README.md](deploy/README.md) to self-host with Caddy and automatic HTTPS.
+
+## Mobile Apps
+
+The iOS and Android projects package the same interface for offline use with Capacitor.
+Native saving, file export, screen wake control, and app lifecycle events live in `mobile/`.
+The website does not load these dependencies.
+
+```sh
+npm ci
+npm run check
+npm run sync
+npm run open:ios
+# or
+npm run open:android
+```
+
+Use Xcode 26 or later for iOS, and JDK 21 with Android SDK 36 for Android.
+See [Mobile Development](docs/mobile.md) for builds, testing, and signing.
+See [Release Preparation](store/release.md) for the remaining publishing steps.
+Run `npm run assets` to regenerate native icons and launch images from `favicon.svg`.
 
 ## License
 

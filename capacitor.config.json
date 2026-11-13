@@ -1,0 +1,10 @@
+{
+  "appId": "com.freetoprompt.app",
+  "appName": "Free to Prompt",
+  "webDir": "dist",
+  "backgroundColor": "#050817",
+  "loggingBehavior": "debug",
+  "ios": { "contentInset": "never" },
+  "android": { "allowMixedContent": false },
+  "plugins": { "SplashScreen": { "launchAutoHide": true } }
+}

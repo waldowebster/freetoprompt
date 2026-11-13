@@ -1,0 +1,44 @@
+{
+  "name": "freetoprompt",
+  "version": "1.0.0",
+  "description": "A free, open source teleprompter for the web, iOS, and Android.",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "check": "node --check app.js && node --check mobile/bridge.mjs && node --check mobile/save-queue.mjs && npm test",
+    "build:mobile": "node scripts/build-mobile.mjs",
+    "sync": "npm run build:mobile && cap sync",
+    "open:ios": "cap open ios",
+    "open:android": "cap open android",
+    "assets": "node scripts/generate-assets.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/waldowebster/freetoprompt.git"
+  },
+  "author": "Waldough, Inc.",
+  "license": "MIT",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/waldowebster/freetoprompt/issues"
+  },
+  "homepage": "https://github.com/waldowebster/freetoprompt#readme",
+  "dependencies": {
+    "@capacitor-community/keep-awake": "8.0.1",
+    "@capacitor/android": "8.6.2",
+    "@capacitor/app": "8.1.2",
+    "@capacitor/core": "8.6.2",
+    "@capacitor/filesystem": "8.1.5",
+    "@capacitor/ios": "8.6.2",
+    "@capacitor/preferences": "8.0.1",
+    "@capacitor/share": "8.0.3"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.6.2",
+    "esbuild": "0.28.2",
+    "sharp": "0.35.5"
+  },
+  "private": true,
+  "engines": {
+    "node": ">=22"
+  }
+}

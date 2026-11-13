@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0b0e14">
   <meta name="description" content="A free, open source teleprompter. Write your script, adjust your pace, and start prompting. No signup. Your script stays in your browser.">
   <title>Free to Prompt | Free, Open Source Teleprompter</title>
@@ -38,8 +38,9 @@
         </div>
       </div>
       <textarea id="script" placeholder="Paste or write your script…" spellcheck="true"></textarea>
-      <div class="script-footer"><span id="wordCount">0 words</span><span id="saveStatus" role="status"></span><button id="btnKeys" class="quiet"><span aria-hidden="true" class="key-icon">⌘</span> Keyboard Shortcuts</button></div>
+      <div class="script-footer"><span id="wordCount">0 words</span><span id="saveStatus" role="status"></span><button id="btnRetryLoad" class="quiet" hidden>Retry</button><button id="btnKeys" class="quiet"><span aria-hidden="true" class="key-icon">⌘</span> Keyboard Shortcuts</button></div>
     </section>
+    <nav class="app-links" aria-label="App information"><a href="privacy.html">Privacy</a><a href="support.html">Support</a></nav>
   </main>
   <section id="stage" aria-label="Teleprompter" hidden>
     <div id="reading"><div id="content"></div><div id="guide" aria-hidden="true"></div></div>

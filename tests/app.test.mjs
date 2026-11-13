@@ -8,7 +8,7 @@ const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 
 // State/event regressions only. Layout, real input, and browser capabilities
 // are checked separately in a real browser (see CONTRIBUTING.md).
-function boot(saved = '{}', storageFails = false) {
+function boot(saved = '{}', storageFails = false, native = null) {
   let document;
   function element() {
     const handlers = new Map();
@@ -19,7 +19,7 @@ function boot(saved = '{}', storageFails = false) {
       style: { setProperty(k, v) { this[k] = v; } },
       classList: { add: (...v) => v.forEach(x => classes.add(x)), remove: (...v) => v.forEach(x => classes.delete(x)), contains: v => classes.has(v) },
       addEventListener(name, fn) { const list = handlers.get(name) || []; list.push(fn); handlers.set(name, list); },
-      fire(name, extra = {}) { for (const fn of handlers.get(name) || []) fn({target: this, currentTarget: this, preventDefault() {}, ...extra}); },
+      fire(name, extra = {}) { return Promise.all((handlers.get(name) || []).map(fn => fn({target: this, currentTarget: this, preventDefault() {}, ...extra}))); },
       focus() { document.activeElement = this; }, blur() { document.activeElement = document.body; },
       closest() { return null; }, contains() { return false; }, setAttribute(k, v) { this[k] = v; },
       replaceChildren(...children) { this.children = children; },
@@ -33,14 +33,14 @@ function boot(saved = '{}', storageFails = false) {
   elements.stage.hidden = true;
   document = Object.assign(element(), {body: element(), documentElement: element(), getElementById: id => elements[id], createElement: element, hidden: false});
   document.activeElement = document.body;
-  const window = Object.assign(element(), {innerHeight: 800});
+  const window = Object.assign(element(), {innerHeight: 800, PromptNative: native});
   let frame, stored = saved;
   const timers = [];
-  vm.runInNewContext(source, {document, window, navigator: {}, localStorage: {
+  const ready = vm.runInNewContext(source, {document, window, navigator: {}, localStorage: {
     getItem() { if (storageFails) throw Error('denied'); return stored; },
     setItem(k, v) { if (storageFails) throw Error('denied'); stored = v; },
   }, performance: {now: () => 0}, requestAnimationFrame: fn => { frame = fn; }, setTimeout: fn => { timers.push(fn); return timers.length; }, clearTimeout() {}});
-  return {elements, document, window, tick: t => frame(t), timers, stored: () => JSON.parse(stored)};
+  return {elements, document, window, ready, tick: t => frame(t), timers, stored: () => JSON.parse(stored)};
 }
 
 test('empty and whitespace-only scripts cannot enter prompting', () => {
@@ -166,4 +166,82 @@ test('intro script appears for new visitors without replacing saved or cleared d
   assert.ok(firstVisit.elements.content.children.some(p => p.textContent.includes('Waldo Webster')));
   assert.equal(boot('{"text":"My own script"}').elements.script.value, 'My own script');
   assert.equal(boot('{"text":""}').elements.script.value, '');
+});
+
+function nativeDevice(overrides = {}) {
+  const calls = { saves: [], awake: [], exports: [], listeners: null };
+  const native = {
+    load: async () => JSON.stringify({ text: 'Native saved draft', speed: 32 }),
+    save: async value => { calls.saves.push(JSON.parse(value)); },
+    setAwake: async value => { calls.awake.push(value); },
+    exportScript: async text => { calls.exports.push(text); },
+    listen: async handlers => { calls.listeners = handlers; },
+    ...overrides,
+  };
+  return { native, calls };
+}
+
+test('native startup waits for persistent storage and never uses browser storage', async () => {
+  let resolve;
+  const { native, calls } = nativeDevice({ load: () => new Promise(r => { resolve = r; }) });
+  const app = boot('{}', true, native);
+  assert.equal(app.elements.script.disabled, true);
+  assert.equal(calls.saves.length, 0);
+  resolve('{"text":"Restored after restart","size":64}');
+  await app.ready;
+  assert.equal(app.elements.script.value, 'Restored after restart');
+  assert.equal(app.elements.size.value, 64);
+  assert.equal(app.elements.script.disabled, false);
+  assert.equal(app.elements.btnExport.textContent, 'Export');
+  assert.equal(calls.saves.at(-1).text, 'Restored after restart');
+});
+
+test('native read failure leaves the saved draft untouched and offers Retry', async () => {
+  const { native, calls } = nativeDevice({ load: async () => { throw Error('unavailable'); } });
+  const app = boot('{}', false, native);
+  await app.ready;
+  assert.equal(calls.saves.length, 0);
+  assert.equal(app.elements.script.disabled, true);
+  assert.equal(app.elements.bar.inert, true);
+  assert.equal(app.elements.btnRetryLoad.hidden, false);
+  assert.equal(app.elements.saveStatus.textContent, 'Could not load saved script');
+});
+
+test('native export preserves text, backgrounding pauses, and Back returns to editing', async () => {
+  const { native, calls } = nativeDevice();
+  const app = boot('{}', false, native);
+  await app.ready;
+  const e = app.elements;
+  e.script.value = 'Résumé\n\n<script>literal text</script>';
+  await e.script.fire('input');
+  await e.btnExport.fire('click');
+  assert.equal(calls.exports[0], e.script.value);
+  await e.btnMode.fire('click');
+  assert.equal(calls.awake.at(-1), true);
+  calls.listeners.onActive(false);
+  assert.equal(e.btnPlay.textContent, 'Play');
+  assert.equal(calls.awake.at(-1), false);
+  calls.listeners.onActive(true);
+  assert.equal(e.btnPlay.textContent, 'Play');
+  assert.equal(calls.listeners.onBack(), true);
+  assert.equal(e.stage.hidden, true);
+  assert.equal(calls.awake.at(-1), false);
+  e.resetDialog.open = true;
+  assert.equal(calls.listeners.onBack(), true);
+  assert.equal(e.resetDialog.open, false);
+  assert.equal(calls.listeners.onBack(), false);
+});
+
+test('an older native save failure cannot overwrite the latest successful save status', async () => {
+  const saves = [];
+  const { native } = nativeDevice({ save: () => new Promise((resolve, reject) => saves.push({resolve, reject})) });
+  const app = boot('{}', false, native);
+  await app.ready;
+  app.elements.script.value = 'Latest draft';
+  await app.elements.script.fire('input');
+  saves.at(-1).resolve();
+  await Promise.resolve();
+  saves[0].reject(Error('older failure'));
+  await Promise.resolve();
+  assert.equal(app.elements.saveStatus.textContent, '');
 });

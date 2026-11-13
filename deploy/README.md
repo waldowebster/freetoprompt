@@ -2,7 +2,7 @@
 
 Free to Prompt is a static website.
 Any static host can serve it, including GitHub Pages, Nginx, Apache, or Caddy.
-Only `index.html`, `styles.css`, `app.js`, `favicon.svg`, `favicon.ico`, `robots.txt`, and `sitemap.xml` are needed at runtime.
+Only `index.html`, `styles.css`, `app.js`, `favicon.svg`, `favicon.ico`, `robots.txt`, `sitemap.xml`, `privacy.html`, `support.html`, and `policy.css` are needed at runtime.
 Do not expose the repository's `.git` directory or server credentials.
 
 ## AWS Lightsail and Caddy

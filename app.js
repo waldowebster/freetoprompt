@@ -1,32 +1,60 @@
-(() => {
+(async () => {
   const $ = id => document.getElementById(id);
   const LS_KEY = 'prompter.v1';
   const LINE = 1.35; // must match #content line-height
+  const native = window.PromptNative;
+  let savedValue;
+  if (native) {
+    $('script').disabled = $('btnImport').disabled = true;
+    $('bar').inert = true;
+    try {
+      savedValue = await native.load();
+    } catch {
+      // Never replace an unreadable native draft with the welcome script.
+      $('saveStatus').textContent = 'Could not load saved script';
+      $('btnRetryLoad').hidden = false;
+      $('btnRetryLoad').addEventListener('click', () => window.location.reload());
+      return;
+    }
+    $('script').disabled = $('btnImport').disabled = false;
+    $('bar').inert = false;
+    $('btnExport').textContent = 'Export';
+  }
 
   const DEFAULT_SCRIPT = `Welcome to Free to Prompt.
 
 A free, open source teleprompter by Waldo Webster.
 
-Built for anyone with something to say. No signup, no subscriptions. Your script stays in your browser.
+Built for anyone with something to say. No signup, no subscriptions. Your script stays ${native ? 'on your device' : 'in your browser'}.
 
-Explore the code, suggest an improvement, or contribute on GitHub. Find Waldo at waldo.biz.
+Explore the code, suggest an improvement, or contribute on GitHub.
 
 Your words. Your pace. Press play.`;
 
   const s = { text: DEFAULT_SCRIPT, size: 46, bright: 100, speed: 20, width: 80, mirrorH: false, mirrorV: false };
   try {
-    const saved = JSON.parse(localStorage.getItem(LS_KEY) || '{}');
+    const saved = JSON.parse((native ? savedValue : localStorage.getItem(LS_KEY)) || '{}');
     if (saved && typeof saved === 'object') {
-      if (typeof saved.text === 'string') s.text = saved.text;
+      if (typeof saved.text === 'string') {
+        const previousIntro = DEFAULT_SCRIPT.replace('on GitHub.', 'on GitHub. Find Waldo at waldo.biz.');
+        // Refresh only the untouched welcome script, preserving personal drafts.
+        s.text = saved.text === previousIntro ? DEFAULT_SCRIPT : saved.text;
+      }
       for (const [key, min, max] of [['size', 24, 160], ['bright', 15, 100], ['speed', 1, 100], ['width', 40, 96]]) {
         if (typeof saved[key] === 'number' && Number.isFinite(saved[key])) s[key] = Math.min(max, Math.max(min, saved[key]));
       }
       for (const key of ['mirrorH', 'mirrorV']) s[key] = saved[key] === true;
     }
   } catch {}
+  let saveVersion = 0;
   const save = () => {
-    try { localStorage.setItem(LS_KEY, JSON.stringify(s)); }
-    catch { $('saveStatus').textContent = 'Not saved'; }
+    const version = ++saveVersion;
+    const status = message => { if (version === saveVersion) $('saveStatus').textContent = message; };
+    try {
+      const value = JSON.stringify(s);
+      if (native) native.save(value).then(() => status(''), () => status('Not saved'));
+      else { localStorage.setItem(LS_KEY, value); status(''); }
+    } catch { status('Not saved'); }
   };
 
   const stage = $('stage'), content = $('content'), script = $('script');
@@ -140,6 +168,10 @@ Your words. Your pace. Press play.`;
   });
   let wakeLock = null;
   async function requestWakeLock() {
+    if (native) {
+      if (prompting && !document.hidden) await native.setAwake(true).catch(() => {});
+      return;
+    }
     if (!('wakeLock' in navigator) || document.hidden || !prompting || wakeLock) return;
     try {
       const lock = await navigator.wakeLock.request('screen');
@@ -148,11 +180,25 @@ Your words. Your pace. Press play.`;
       lock.addEventListener('release', () => { if (wakeLock === lock) wakeLock = null; });
     } catch { /* A denied wake lock must never prevent prompting. */ }
   }
-  function releaseWakeLock() { if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; } }
-  document.addEventListener('visibilitychange', () => {
-    if (document.hidden) { hold = 0; playing = false; syncPlay(); releaseWakeLock(); }
+  function releaseWakeLock() {
+    if (native) void native.setAwake(false).catch(() => {});
+    if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; }
+  }
+  function activeChanged(active) {
+    if (!active) { hold = 0; playing = false; syncPlay(); releaseWakeLock(); }
     else if (prompting) requestWakeLock();
-  });
+  }
+  document.addEventListener('visibilitychange', () => activeChanged(!document.hidden));
+  if (native) native.listen({
+    onActive: activeChanged,
+    onBack: () => {
+      for (const id of ['resetDialog', 'shortcuts']) {
+        if ($(id).open) { $(id).close(); return true; }
+      }
+      if (prompting) { stopPrompting(); return true; }
+      return false;
+    },
+  }).catch(() => { $('saveStatus').textContent = 'Device controls unavailable'; });
 
   // ---------- animation loop ----------
   let last = performance.now(), shownRemaining = '';
@@ -268,7 +314,15 @@ Your words. Your pace. Press play.`;
     } catch { $('saveStatus').textContent = 'Could not open file'; }
     finally { e.target.value = ''; }
   });
-  $('btnExport').addEventListener('click', () => {
+  $('btnExport').addEventListener('click', async () => {
+    if (native) {
+      $('btnExport').disabled = true;
+      try { await native.exportScript(script.value); }
+      catch (error) {
+        if (!/cancel/i.test(error?.message || '')) $('saveStatus').textContent = 'Could not export script';
+      } finally { updateEditor(); }
+      return;
+    }
     const url = URL.createObjectURL(new Blob([script.value], {type: 'text/plain;charset=utf-8'}));
     const link = document.createElement('a');
     link.href = url; link.download = 'freetoprompt-script.txt'; link.click();

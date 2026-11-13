@@ -6,3 +6,9 @@ test-results/
 playwright-report/
 *.pem
 *.key
+dist/
+artifacts/
+*.jks
+*.keystore
+*.p12
+*.mobileprovision
