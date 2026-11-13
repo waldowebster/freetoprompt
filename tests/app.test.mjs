@@ -1,0 +1,106 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import vm from 'node:vm';
+
+const source = readFileSync(new URL('../app.js', import.meta.url), 'utf8');
+const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+
+// State/event regressions only. Layout, real input, and browser capabilities
+// are checked separately in a real browser (see CONTRIBUTING.md).
+function boot(saved = '{}', storageFails = false) {
+  let document;
+  function element() {
+    const handlers = new Map();
+    const classes = new Set();
+    return {
+      value: '', textContent: '', hidden: false, checked: false, disabled: false,
+      style: { setProperty(k, v) { this[k] = v; } },
+      classList: { add: (...v) => v.forEach(x => classes.add(x)), remove: (...v) => v.forEach(x => classes.delete(x)), contains: v => classes.has(v) },
+      addEventListener(name, fn) { const list = handlers.get(name) || []; list.push(fn); handlers.set(name, list); },
+      fire(name, extra = {}) { for (const fn of handlers.get(name) || []) fn({target: this, currentTarget: this, preventDefault() {}, ...extra}); },
+      focus() { document.activeElement = this; }, blur() { document.activeElement = document.body; },
+      closest() { return null; }, contains() { return false; }, setAttribute(k, v) { this[k] = v; },
+      replaceChildren(...children) { this.children = children; },
+      offsetHeight: 2000, clientHeight: 800,
+    };
+  }
+  const elements = Object.fromEntries([...html.matchAll(/id="([^"]+)"/g)].map(m => [m[1], element()]));
+  for (const m of html.matchAll(/<input type="range" id="(\w+)" min="(\d+)" max="(\d+)"/g)) {
+    Object.assign(elements[m[1]], {type: 'range', min: m[2], max: m[3]});
+  }
+  elements.stage.hidden = true;
+  document = Object.assign(element(), {body: element(), documentElement: element(), getElementById: id => elements[id], createElement: element, hidden: false});
+  document.activeElement = document.body;
+  const window = Object.assign(element(), {innerHeight: 800});
+  let frame, stored = saved;
+  const timers = [];
+  vm.runInNewContext(source, {document, window, navigator: {}, localStorage: {
+    getItem() { if (storageFails) throw Error('denied'); return stored; },
+    setItem(k, v) { if (storageFails) throw Error('denied'); stored = v; },
+  }, performance: {now: () => 0}, requestAnimationFrame: fn => { frame = fn; }, setTimeout: fn => { timers.push(fn); return timers.length; }, clearTimeout() {}});
+  return {elements, document, window, tick: t => frame(t), timers, stored: () => JSON.parse(stored)};
+}
+
+test('empty and whitespace-only scripts cannot enter prompting', () => {
+  const app = boot();
+  assert.equal(app.elements.btnMode.disabled, true);
+  app.elements.script.value = ' \n\t ';
+  app.elements.script.fire('input');
+  app.window.fire('keydown', {key: 'Enter', ctrlKey: true});
+  assert.equal(app.elements.stage.hidden, true);
+});
+
+test('corrupt saved settings recover and valid numbers stay within bounds', () => {
+  for (const data of ['null', '"bad"', '{broken', '{"text":3,"speed":-100,"size":9999,"width":"bad","mirrorH":"true"}']) {
+    const app = boot(data);
+    const s = app.stored();
+    assert.equal(typeof s.text, 'string');
+    assert.ok(s.speed >= 1 && s.speed <= 100);
+    assert.ok(s.size >= 24 && s.size <= 160);
+    assert.equal(s.width, 80);
+    assert.equal(s.mirrorH, false);
+  }
+});
+
+test('script markup is rendered literally and storage denial does not prevent use', () => {
+  const app = boot('{}', true);
+  app.elements.script.value = '<img src=x onerror=alert(1)>\nSecond line';
+  app.elements.script.fire('input');
+  app.elements.btnMode.fire('click');
+  assert.equal(app.elements.stage.hidden, false);
+  assert.equal(app.elements.content.children[0].textContent, '<img src=x onerror=alert(1)>');
+  assert.equal(app.elements.content.children.length, 2);
+  assert.equal(app.elements.saveStatus.textContent, 'Not saved');
+});
+
+test('pausing and finishing keep controls available; hidden tabs pause playback', () => {
+  const app = boot('{"text":"A script","speed":100}');
+  app.elements.btnMode.fire('click');
+  app.timers.at(-1)();
+  assert.equal(app.document.body.classList.contains('idle'), false);
+  app.elements.btnPlay.fire('click');
+  assert.equal(app.elements.btnPlay.textContent, 'Pause');
+  app.document.hidden = true;
+  app.document.fire('visibilitychange');
+  assert.equal(app.elements.btnPlay.textContent, 'Play');
+  app.document.hidden = false;
+  app.elements.btnPlay.fire('click');
+  for (let t = 100; t <= 15000; t += 100) app.tick(t);
+  assert.equal(app.elements.btnPlay.textContent, 'Play');
+  assert.equal(app.elements.paused.textContent, 'Finished');
+});
+
+test('focused controls retain their native keys and mirror excludes controls', () => {
+  const app = boot('{"text":"A script"}');
+  app.elements.btnMode.fire('click');
+  const before = app.elements.speed.value;
+  app.window.fire('keydown', {key: 'ArrowRight', target: {closest: () => app.elements.speed}});
+  assert.equal(app.elements.speed.value, before);
+  app.window.fire('keydown', {key: 'm'});
+  assert.equal(app.elements.reading.style.transform, 'scale(-1, 1)');
+  assert.equal(app.elements.stage.style.transform, undefined);
+  app.window.fire('keydown', {key: 'Escape'});
+  assert.equal(app.elements.stage.hidden, true);
+  assert.equal(app.document.activeElement, app.elements.script);
+});
