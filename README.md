@@ -10,6 +10,7 @@ Your script and settings stay in your browser's local storage.
 ## Features
 
 - Smooth scrolling with adjustable speed, text size, brightness, and width.
+- Live text size and brightness preview in the script editor.
 - Horizontal mirroring and vertical flipping for teleprompter hardware.
 - Keyboard controls, mouse wheel scrolling, and touch scrolling.
 - Fullscreen and screen wake lock where supported by the browser.
@@ -32,7 +33,7 @@ Use localhost or HTTPS for the most consistent experience.
 
 | Action | Keyboard |
 | --- | --- |
-| Start prompting | Ctrl/Cmd + Enter |
+| Play | Ctrl/Cmd + Enter |
 | Play or pause | Space |
 | Scroll backward / forward | Up / Down |
 | Decrease / increase speed | Left / Right |

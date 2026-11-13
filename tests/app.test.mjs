@@ -77,6 +77,9 @@ test('script markup is rendered literally and storage denial does not prevent us
 test('pausing and finishing keep controls available; hidden tabs pause playback', () => {
   const app = boot('{"text":"A script","speed":100}');
   app.elements.btnMode.fire('click');
+  assert.equal(app.elements.btnPlay.textContent, 'Pause');
+  app.elements.btnPlay.fire('click');
+  assert.equal(app.elements.btnPlay.textContent, 'Play');
   app.timers.at(-1)();
   assert.equal(app.document.body.classList.contains('idle'), false);
   app.elements.btnPlay.fire('click');
@@ -103,4 +106,16 @@ test('focused controls retain their native keys and mirror excludes controls', (
   app.window.fire('keydown', {key: 'Escape'});
   assert.equal(app.elements.stage.hidden, true);
   assert.equal(app.document.activeElement, app.elements.script);
+});
+
+test('Play starts scrolling immediately and returning preserves the draft', () => {
+  const app = boot('{"text":"Keep this draft"}');
+  app.elements.btnMode.fire('click');
+  app.tick(100);
+  assert.equal(app.elements.btnPlay.textContent, 'Pause');
+  assert.notEqual(app.elements.content.style.transform, 'translate3d(0, 0px, 0)');
+  app.elements.btnMode.fire('click');
+  assert.equal(app.elements.stage.hidden, true);
+  assert.equal(app.elements.btnMode.textContent, 'Play');
+  assert.equal(app.elements.script.value, 'Keep this draft');
 });

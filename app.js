@@ -67,7 +67,7 @@
     content.replaceChildren(...s.text.split(/\r?\n/).filter(l => l.trim()).map(l => {
       const p = document.createElement('p'); p.textContent = l; return p;
     }));
-    prompting = true; playing = false; pos = 0; max = 0; hold = 0;
+    prompting = true; playing = true; pos = 0; max = 0; hold = 0;
     document.body.classList.add('prompting');
     $('editor').hidden = true; stage.hidden = false;
     $('btnMode').textContent = 'Edit Script'; $('btnMode').classList.remove('primary');
@@ -83,7 +83,7 @@
     prompting = false; playing = false; hold = 0;
     document.body.classList.remove('prompting', 'idle');
     $('editor').hidden = false; stage.hidden = true;
-    $('btnMode').textContent = 'Start Prompting'; $('btnMode').classList.add('primary');
+    $('btnMode').textContent = 'Play'; $('btnMode').classList.add('primary');
     $('btnPlay').hidden = $('btnTop').hidden = true;
     $('remaining').textContent = '';
     releaseWakeLock();
