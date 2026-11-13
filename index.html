@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#111310">
+  <meta name="theme-color" content="#0b0e14">
   <meta name="description" content="A free, open source teleprompter. Write your script, adjust your pace, and start prompting. No signup. Your script stays in your browser.">
   <title>Free to Prompt | Free, Open Source Teleprompter</title>
   <link rel="canonical" href="https://freetoprompt.com/">
@@ -18,8 +18,14 @@
 <body>
   <main id="editor">
     <header class="header">
-      <h1><span class="brand-mark" aria-hidden="true">▸</span> Free to Prompt</h1>
-      <a class="source-link" href="https://github.com/waldowebster/freetoprompt" target="_blank" rel="noopener noreferrer"><svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7"><path d="m8 6-6 6 6 6m8-12 6 6-6 6m-3-15-2 18"/></svg> Open Source <span aria-hidden="true">↗</span></a>
+      <h1><img class="brand-mark" src="favicon.svg" width="46" height="46" alt=""><span>Free<span class="wordmark-to"> to </span>Prompt<span class="brand-period">.</span></span></h1>
+      <nav class="header-links" aria-label="Project links">
+        <span class="maker"><svg viewBox="0 0 28 22" aria-hidden="true"><path d="m2 3 5 16 7-12 7 12 5-16"/></svg><span>A <strong>Waldough</strong> Project</span></span>
+        <div class="repo-actions">
+          <a class="github-link" href="https://github.com/waldowebster/freetoprompt" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M12 .9a11.1 11.1 0 0 0-3.5 21.63c.55.1.76-.24.76-.54v-2.06c-3.1.67-3.76-1.31-3.76-1.31-.5-1.29-1.24-1.63-1.24-1.63-1.02-.69.08-.68.08-.68 1.12.08 1.7 1.15 1.7 1.15 1 .1.45 2.15 3.27 1.48.1-.72.4-1.21.71-1.49-2.47-.28-5.07-1.24-5.07-5.49 0-1.21.43-2.2 1.14-2.98-.11-.28-.5-1.42.11-2.95 0 0 .93-.3 3.05 1.14a10.6 10.6 0 0 1 5.56 0c2.12-1.44 3.05-1.14 3.05-1.14.61 1.53.22 2.67.11 2.95.71.78 1.14 1.77 1.14 2.98 0 4.26-2.6 5.2-5.08 5.48.4.35.75 1.02.75 2.06v3.09c0 .3.2.65.77.54A11.1 11.1 0 0 0 12 .9Z"/></svg>GitHub</a>
+          <a class="star-link" href="https://github.com/waldowebster/freetoprompt" target="_blank" rel="noopener noreferrer" aria-label="Support Free to Prompt with a star on GitHub"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9Z"/></svg>Star</a>
+        </div>
+      </nav>
     </header>
     <section class="script-panel" aria-label="Script editor">
       <div class="script-toolbar">
@@ -31,7 +37,7 @@
         </div>
       </div>
       <textarea id="script" placeholder="Paste or write your script…" spellcheck="true"></textarea>
-      <div class="script-footer"><span id="wordCount">0 words</span><span id="saveStatus" role="status"></span><button id="btnKeys" class="quiet">Keyboard Shortcuts <span aria-hidden="true">⌘</span></button></div>
+      <div class="script-footer"><span id="wordCount">0 words</span><span id="saveStatus" role="status"></span><button id="btnKeys" class="quiet"><span aria-hidden="true" class="key-icon">⌘</span> Keyboard Shortcuts</button></div>
     </section>
   </main>
   <section id="stage" aria-label="Teleprompter" hidden>
@@ -41,7 +47,7 @@
   </section>
   <footer id="bar" aria-label="Teleprompter controls">
     <div class="transport">
-      <button id="btnMode" class="primary" disabled>Start Prompting <span aria-hidden="true">▶</span></button>
+      <button id="btnMode" class="primary" disabled>Start Prompting</button>
       <button id="btnPlay" class="primary" hidden>Play</button>
       <button id="btnTop" hidden>Restart</button>
     </div>
@@ -52,8 +58,8 @@
       <label for="width"><span>Width <output id="widthOut" for="width"></output></span><input type="range" id="width" min="40" max="96" step="2"></label>
     </div>
     <div class="view-controls">
-      <label class="toggle"><input type="checkbox" id="mirrorH">Mirror</label>
-      <label class="toggle"><input type="checkbox" id="mirrorV">Flip</label>
+      <label class="toggle"><input type="checkbox" id="mirrorH"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M8 6 3 18h5Zm8 0 5 12h-5Z"/></svg><span>Mirror</span></label>
+      <label class="toggle"><input type="checkbox" id="mirrorV"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h18M6 8l12-5v5Zm0 8 12 5v-5Z"/></svg><span>Flip</span></label>
       <span id="remaining" role="timer"></span>
       <button id="btnFull">Fullscreen</button>
     </div>

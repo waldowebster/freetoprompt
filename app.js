@@ -37,6 +37,7 @@
     $('reading').style.transform = `scale(${s.mirrorH ? -1 : 1}, ${s.mirrorV ? -1 : 1})`;
     for (const k of ['speed', 'size', 'bright', 'width']) {
       $(k).value = s[k];
+      $(k).style.setProperty('--progress', ((s[k] - +$(k).min) / (+$(k).max - +$(k).min) * 100) + '%');
       $(k + 'Out').textContent = s[k] + (k === 'bright' || k === 'width' ? '%' : '');
     }
     $('mirrorH').checked = s.mirrorH;
