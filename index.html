@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prompter</title>
+<style>
+  :root { --size: 64px; --bright: 100%; --width: 80%; --guide: 30vh; }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body {
+    margin: 0; height: 100%; overflow: hidden;
+    background: #000; color: #fff;
+    font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
+  }
+  body { display: flex; flex-direction: column; }
+
+  /* ---------- Editor ---------- */
+  #editor { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 12px; padding: 24px 24px 12px; }
+  #editor h1 { margin: 0; font-size: 20px; font-weight: 600; }
+  #editor textarea {
+    flex: 1; min-height: 0; resize: none;
+    background: #111; color: #eee; border: 1px solid #333; border-radius: 8px;
+    padding: 16px; font: 18px/1.5 inherit; font-family: inherit;
+  }
+  #editor textarea:focus { outline: 2px solid #4a90ff; outline-offset: -1px; }
+  #editor .hint { color: #888; font-size: 13px; line-height: 1.6; }
+  kbd {
+    background: #222; border: 1px solid #444; border-radius: 4px;
+    padding: 1px 6px; font: 12px ui-monospace, Menlo, monospace; color: #ccc;
+  }
+
+  /* ---------- Prompter stage ---------- */
+  #stage { position: fixed; inset: 0; overflow: hidden; background: #000; cursor: pointer; }
+  #content {
+    width: var(--width); margin: 0 auto;
+    padding: var(--guide) 0 75vh;
+    font-size: var(--size); line-height: 1.35; font-weight: 600;
+    color: hsl(0 0% var(--bright));
+    will-change: transform;
+  }
+  #content p { margin: 0 0 0.7em; overflow-wrap: break-word; }
+  #guide {
+    position: absolute; left: 1.5%; top: calc(var(--guide) + var(--size) * 0.675);
+    transform: translateY(-50%);
+    border: calc(var(--size) * 0.22) solid transparent; border-left-color: #666; border-right: 0;
+  }
+  #paused, #toast {
+    position: absolute; right: 2%; padding: 6px 14px; border-radius: 6px;
+    background: #222; color: #aaa; font-size: 20px; font-weight: 600;
+  }
+  #paused { top: 2%; }
+  #toast { top: calc(2% + 48px); opacity: 0; transition: opacity .3s; }
+  #toast.show { opacity: 1; transition: none; }
+
+  /* ---------- Control bar ---------- */
+  #bar {
+    flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px;
+    padding: 12px 24px; background: #161616; border-top: 1px solid #2a2a2a;
+    font-size: 13px; color: #bbb; transition: opacity .25s;
+  }
+  body.prompting #bar { position: fixed; left: 0; right: 0; bottom: 0; background: rgba(22,22,22,.94); }
+  body.prompting.idle #bar { opacity: 0; pointer-events: none; }
+  body.prompting.idle #stage { cursor: none; }
+  #bar label { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+  #bar input[type=range] { width: 110px; accent-color: #fff; }
+  #bar output { min-width: 2.6em; color: #fff; font-variant-numeric: tabular-nums; }
+  #bar .spacer { flex: 1; }
+  button {
+    background: #2a2a2a; color: #fff; border: 1px solid #444; border-radius: 6px;
+    padding: 7px 14px; font: inherit; cursor: pointer;
+  }
+  button:hover { background: #383838; }
+  button.primary { background: #fff; color: #000; border-color: #fff; font-weight: 600; }
+  button.primary:hover { background: #ddd; }
+  #remaining { color: #fff; font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+
+<div id="editor">
+  <h1>Prompter</h1>
+  <textarea id="script" placeholder="Paste your script here…" spellcheck="false" autofocus></textarea>
+  <div class="hint">
+    While prompting:
+    <kbd>Space</kbd> play / pause ·
+    hold <kbd>↑</kbd> <kbd>↓</kbd> scroll back / forward ·
+    <kbd>←</kbd> <kbd>→</kbd> slower / faster ·
+    <kbd>−</kbd> <kbd>+</kbd> text size ·
+    <kbd>Home</kbd> back to top ·
+    <kbd>F</kbd> fullscreen ·
+    <kbd>M</kbd> mirror ·
+    <kbd>Esc</kbd> back to editing.
+    Mouse wheel and click (play / pause) work too. Your script and settings are saved in this browser.
+  </div>
+</div>
+
+<div id="stage" hidden>
+  <div id="content"></div>
+  <div id="guide"></div>
+  <div id="paused">Paused</div>
+  <div id="toast"></div>
+</div>
+
+<div id="bar">
+  <button id="btnMode" class="primary">Start ▶</button>
+  <button id="btnPlay" hidden>Play</button>
+  <button id="btnTop" hidden>Top</button>
+  <label>Speed <input type="range" id="speed" min="1" max="100" step="1"><output id="speedOut"></output></label>
+  <label>Size <input type="range" id="size" min="24" max="160" step="2"><output id="sizeOut"></output></label>
+  <label>Brightness <input type="range" id="bright" min="15" max="100" step="5"><output id="brightOut"></output></label>
+  <label>Width <input type="range" id="width" min="40" max="96" step="2"><output id="widthOut"></output></label>
+  <label><input type="checkbox" id="mirrorH"> Mirror</label>
+  <label><input type="checkbox" id="mirrorV"> Flip</label>
+  <span class="spacer"></span>
+  <span id="remaining"></span>
+  <button id="btnFull">Fullscreen</button>
+</div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const LS_KEY = 'prompter.v1';
+  const LINE = 1.35; // must match #content line-height
+
+  const s = { text: '', size: 64, bright: 100, speed: 20, width: 80, mirrorH: false, mirrorV: false };
+  try { Object.assign(s, JSON.parse(localStorage.getItem(LS_KEY) || '{}')); } catch (e) {}
+  const save = () => { try { localStorage.setItem(LS_KEY, JSON.stringify(s)); } catch (e) {} };
+
+  const stage = $('stage'), content = $('content'), script = $('script');
+  let prompting = false, playing = false;
+  let pos = 0, max = 0;
+  let hold = 0, holdStart = 0;      // -1 = scrolling back, 1 = forward (arrow key held)
+  let idleTimer = 0, toastTimer = 0;
+
+  const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+  const pxPerSec = () => s.speed * s.size * LINE / 40;   // speed 20 = half a line per second
+
+  // ---------- settings ----------
+  function apply() {
+    const root = document.documentElement.style;
+    root.setProperty('--size', s.size + 'px');
+    root.setProperty('--bright', s.bright + '%');
+    root.setProperty('--width', s.width + '%');
+    stage.style.transform = `scale(${s.mirrorH ? -1 : 1}, ${s.mirrorV ? -1 : 1})`;
+    for (const k of ['speed', 'size', 'bright', 'width']) {
+      $(k).value = s[k];
+      $(k + 'Out').textContent = s[k] + (k === 'bright' || k === 'width' ? '%' : '');
+    }
+    $('mirrorH').checked = s.mirrorH;
+    $('mirrorV').checked = s.mirrorV;
+    measure();
+    save();
+  }
+
+  function measure() {
+    if (!prompting) return;
+    const ratio = max > 0 ? pos / max : 0;
+    // Content has 30vh top + 75vh bottom padding, so this is the height of the text itself.
+    max = Math.max(0, content.offsetHeight - window.innerHeight * 1.05);
+    pos = ratio * max;
+  }
+
+  function set(key, value) {
+    const el = $(key);
+    s[key] = el && el.type === 'range' ? clamp(value, +el.min, +el.max) : value;
+    apply();
+  }
+
+  // ---------- modes ----------
+  function startPrompting() {
+    s.text = script.value; save();
+    content.replaceChildren(...s.text.split(/\r?\n/).filter(l => l.trim()).map(l => {
+      const p = document.createElement('p'); p.textContent = l; return p;
+    }));
+    prompting = true; playing = false; pos = 0; max = 0; hold = 0;
+    document.body.classList.add('prompting');
+    $('editor').hidden = true; stage.hidden = false;
+    $('btnMode').textContent = '✎ Edit'; $('btnMode').classList.remove('primary');
+    $('btnPlay').hidden = $('btnTop').hidden = false;
+    if (document.activeElement) document.activeElement.blur();
+    measure(); syncPlay(); wake();
+  }
+
+  function stopPrompting() {
+    prompting = false; playing = false; hold = 0;
+    document.body.classList.remove('prompting', 'idle');
+    $('editor').hidden = false; stage.hidden = true;
+    $('btnMode').textContent = 'Start ▶'; $('btnMode').classList.add('primary');
+    $('btnPlay').hidden = $('btnTop').hidden = true;
+    $('remaining').textContent = '';
+    script.focus();
+  }
+
+  function syncPlay() {
+    $('btnPlay').textContent = playing ? 'Pause' : 'Play';
+    $('paused').hidden = playing;
+  }
+  function togglePlay() {
+    if (!playing && pos >= max) pos = 0;   // at the end: restart from the top
+    playing = !playing; syncPlay();
+  }
+  function toTop() { pos = 0; playing = false; syncPlay(); }
+
+  function toast(msg) {
+    const t = $('toast');
+    t.textContent = msg; t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 900);
+  }
+
+  // Show the control bar on mouse movement, hide it again after a pause.
+  function wake() {
+    document.body.classList.remove('idle');
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => { if (prompting) document.body.classList.add('idle'); }, 2500);
+  }
+
+  function toggleFullscreen() {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else document.documentElement.requestFullscreen().catch(() => {});
+  }
+
+  // ---------- animation loop ----------
+  let last = performance.now(), shownRemaining = '';
+  function frame(t) {
+    const dt = Math.min(0.1, (t - last) / 1000); last = t;
+    if (prompting) {
+      if (hold) {
+        const linesPerSec = (t - holdStart) > 1200 ? 9 : 2.5;   // speeds up if you keep holding
+        pos += hold * linesPerSec * s.size * LINE * dt;
+      } else if (playing) {
+        pos += pxPerSec() * dt;
+      }
+      pos = clamp(pos, 0, max);
+      if (playing && pos >= max) { playing = false; syncPlay(); }
+      content.style.transform = `translate3d(0, ${-pos}px, 0)`;
+
+      const secs = Math.ceil((max - pos) / pxPerSec());
+      const label = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')} left`;
+      if (label !== shownRemaining) $('remaining').textContent = shownRemaining = label;
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  // ---------- input ----------
+  window.addEventListener('keydown', e => {
+    if (!prompting) {
+      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); startPrompting(); }
+      return;
+    }
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    let handled = true;
+    switch (e.key) {
+      case ' ': case 'Enter': if (!e.repeat) togglePlay(); break;
+      case 'ArrowUp':   if (hold !== -1) { hold = -1; holdStart = performance.now(); } break;
+      case 'ArrowDown': if (hold !== 1)  { hold = 1;  holdStart = performance.now(); } break;
+      case 'ArrowLeft':  set('speed', s.speed - 2); toast('Speed ' + s.speed); break;
+      case 'ArrowRight': set('speed', s.speed + 2); toast('Speed ' + s.speed); break;
+      case 'PageUp':   pos -= window.innerHeight * 0.5; break;
+      case 'PageDown': pos += window.innerHeight * 0.5; break;
+      case '-': case '_': set('size', s.size - 4); toast('Size ' + s.size); break;
+      case '=': case '+': set('size', s.size + 4); toast('Size ' + s.size); break;
+      case 'Home': case 'r': case 'R': toTop(); break;
+      case 'f': case 'F': toggleFullscreen(); break;
+      case 'm': case 'M': set('mirrorH', !s.mirrorH); break;
+      case 'Escape': stopPrompting(); break;
+      default: handled = false;
+    }
+    if (handled) {
+      e.preventDefault();
+      // Keep focus off the sliders so arrow keys never get swallowed by them.
+      if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
+    }
+  }, true);
+
+  window.addEventListener('keyup', e => {
+    if (e.key === 'ArrowUp' && hold === -1) hold = 0;
+    if (e.key === 'ArrowDown' && hold === 1) hold = 0;
+  }, true);
+  window.addEventListener('blur', () => { hold = 0; });
+
+  stage.addEventListener('wheel', e => { e.preventDefault(); pos += e.deltaY * (s.mirrorV ? -1 : 1); }, { passive: false });
+  stage.addEventListener('click', togglePlay);
+  window.addEventListener('mousemove', () => { if (prompting) wake(); });
+  window.addEventListener('resize', measure);
+
+  for (const k of ['speed', 'size', 'bright', 'width']) {
+    $(k).addEventListener('input', e => { set(k, +e.target.value); if (prompting) wake(); });
+  }
+  $('mirrorH').addEventListener('change', e => set('mirrorH', e.target.checked));
+  $('mirrorV').addEventListener('change', e => set('mirrorV', e.target.checked));
+  $('btnMode').addEventListener('click', () => prompting ? stopPrompting() : startPrompting());
+  $('btnPlay').addEventListener('click', e => { togglePlay(); e.currentTarget.blur(); });
+  $('btnTop').addEventListener('click', e => { toTop(); e.currentTarget.blur(); });
+  $('btnFull').addEventListener('click', e => { toggleFullscreen(); e.currentTarget.blur(); });
+  script.addEventListener('input', () => { s.text = script.value; save(); });
+
+  script.value = s.text;
+  apply();
+})();
+</script>
+</body>
+</html>
