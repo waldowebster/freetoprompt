@@ -9,7 +9,7 @@ A free, open source teleprompter by Waldo Webster.
 
 Built for anyone with something to say. No signup, no subscriptions. Your script stays in your browser.
 
-Explore the code, suggest an improvement, or contribute on GitHub. Find Waldo at waldo.biz.
+Explore the code, suggest an improvement, or contribute on GitHub.
 
 Your words. Your pace. Press play.`;
 
@@ -17,7 +17,11 @@ Your words. Your pace. Press play.`;
   try {
     const saved = JSON.parse(localStorage.getItem(LS_KEY) || '{}');
     if (saved && typeof saved === 'object') {
-      if (typeof saved.text === 'string') s.text = saved.text;
+      if (typeof saved.text === 'string') {
+        const previousIntro = DEFAULT_SCRIPT.replace('on GitHub.', 'on GitHub. Find Waldo at waldo.biz.');
+        // Refresh only the untouched welcome script, preserving personal drafts.
+        s.text = saved.text === previousIntro ? DEFAULT_SCRIPT : saved.text;
+      }
       for (const [key, min, max] of [['size', 24, 160], ['bright', 15, 100], ['speed', 1, 100], ['width', 40, 96]]) {
         if (typeof saved[key] === 'number' && Number.isFinite(saved[key])) s[key] = Math.min(max, Math.max(min, saved[key]));
       }

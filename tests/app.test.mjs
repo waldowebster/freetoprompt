@@ -167,3 +167,14 @@ test('intro script appears for new visitors without replacing saved or cleared d
   assert.equal(boot('{"text":"My own script"}').elements.script.value, 'My own script');
   assert.equal(boot('{"text":""}').elements.script.value, '');
 });
+
+
+test('welcome copy refresh preserves edited scripts and intentionally empty drafts', () => {
+  const current = boot().elements.script.value;
+  assert.ok(!current.includes('Find Waldo at waldo.biz.'));
+  const previous = current.replace('on GitHub.', 'on GitHub. Find Waldo at waldo.biz.');
+  assert.equal(boot(JSON.stringify({text: previous})).elements.script.value, current);
+  const edited = previous + '\nMy own ending.';
+  assert.equal(boot(JSON.stringify({text: edited})).elements.script.value, edited);
+  assert.equal(boot('{"text":""}').elements.script.value, '');
+});
